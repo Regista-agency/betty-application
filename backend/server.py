@@ -16,6 +16,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 from google_services import get_google_service  # noqa: E402
+from gcs_service import upload_photo, make_folder_slug, folder_url, health_check as gcs_health  # noqa: E402
 from llm_service import generate_annonce  # noqa: E402
 
 logging.basicConfig(
@@ -91,10 +92,11 @@ async def health():
     try:
         gs = get_google_service()
         gs.ensure_headers()
-        return {"status": "ok", "google": "connected"}
+        gcs = gcs_health()
+        return {"status": "ok", "google_sheets": "connected", "gcs": gcs}
     except Exception as e:
         logger.exception("Health check failed")
-        return {"status": "degraded", "google_error": str(e)}
+        return {"status": "degraded", "error": str(e)}
 
 
 @api_router.post("/photos/upload")
@@ -103,7 +105,6 @@ async def upload_photos(
     type_bien: str = Form(...),
     files: List[UploadFile] = File(...),
 ):
-    # Read all files first so we can reject if empty
     file_payloads = []
     for f in files:
         content = await f.read()
@@ -114,32 +115,28 @@ async def upload_photos(
         raise HTTPException(status_code=400, detail="Aucun fichier valide reçu")
 
     try:
-        gs = get_google_service()
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-        folder_name = f"{ville} - {type_bien} - {timestamp}"
-        folder = gs.create_folder(folder_name)
-
+        slug = make_folder_slug(ville, type_bien)
         photo_urls = []
         for filename, mime, content in file_payloads:
-            uploaded = gs.upload_image(folder["id"], filename, content, mime)
-            photo_urls.append(uploaded["public_url"])
+            url = upload_photo(ville, type_bien, slug, filename, content, mime)
+            photo_urls.append(url)
 
         return {
-            "folder_id": folder["id"],
-            "folder_url": folder["url"],
+            "folder_id": slug,
+            "folder_url": folder_url(slug),
             "photo_urls": photo_urls,
         }
     except Exception as e:
         logger.exception("Upload photos failed")
         msg = str(e)
-        if "storageQuotaExceeded" in msg or "do not have storage quota" in msg:
+        if "does not have storage.objects.create" in msg or "403" in msg:
             raise HTTPException(
                 status_code=409,
                 detail=(
-                    "Les Service Accounts Google ne peuvent stocker de fichiers que dans un "
-                    "Shared Drive (Google Workspace). Le dossier Drive actuel est un Drive personnel. "
-                    "Solution: crée un Shared Drive et partage-le avec le service account, puis mets "
-                    "à jour GOOGLE_DRIVE_ROOT_FOLDER_ID. L'annonce peut être générée sans photos."
+                    f"Accès GCS refusé. Vérifie que le bucket '{os.environ.get('GCS_BUCKET', '')}' "
+                    f"existe et que le service account "
+                    f"betty-288@betty-project-495316.iam.gserviceaccount.com a le rôle "
+                    f"'Storage Object Admin'. L'annonce peut être générée sans photos."
                 ),
             )
         raise HTTPException(status_code=500, detail=f"Upload échoué: {msg}")
