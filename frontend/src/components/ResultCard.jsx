@@ -1,9 +1,19 @@
-import React, { useState } from "react";
-import { Copy, RefreshCw, Check, Sparkles } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Copy, RefreshCw, Check, Sparkles, Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ResultCard({ result, onRegenerate, regenerating }) {
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState("");
+
+  // Reset edited text whenever a new result arrives (new generation or regeneration)
+  useEffect(() => {
+    if (result) {
+      setEditedText(result.annonce_text);
+      setIsEditing(false);
+    }
+  }, [result?.id, result?.annonce_text]);
 
   if (!result) {
     return (
@@ -40,9 +50,11 @@ export default function ResultCard({ result, onRegenerate, regenerating }) {
     );
   }
 
+  const displayText = isEditing ? editedText : editedText || result.annonce_text;
+
   const copyText = async () => {
     try {
-      await navigator.clipboard.writeText(result.annonce_text);
+      await navigator.clipboard.writeText(displayText);
       setCopied(true);
       toast.success("Annonce copiée !");
       setTimeout(() => setCopied(false), 1600);
@@ -50,6 +62,24 @@ export default function ResultCard({ result, onRegenerate, regenerating }) {
       toast.error("Impossible de copier");
     }
   };
+
+  const startEdit = () => {
+    setEditedText(displayText);
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditedText(result.annonce_text);
+    setIsEditing(false);
+  };
+
+  const saveEdit = () => {
+    setIsEditing(false);
+    toast.success("Modifications enregistrées localement");
+  };
+
+  const isModified = editedText && editedText !== result.annonce_text;
+  const charCount = displayText.length;
 
   return (
     <div className="iad-card iad-fade-in" data-testid="result-card">
@@ -63,45 +93,114 @@ export default function ResultCard({ result, onRegenerate, regenerating }) {
           marginBottom: 16,
         }}
       >
-        <div className="iad-badge-success" data-testid="result-badge">
-          <Check size={14} /> Annonce générée
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="iad-badge-success" data-testid="result-badge">
+            <Check size={14} /> Annonce générée
+          </div>
+          {isModified && !isEditing && (
+            <span
+              data-testid="modified-badge"
+              style={{
+                background: "#FEF3C7",
+                color: "#92400E",
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "4px 10px",
+                borderRadius: 999,
+              }}
+            >
+              ✏️ Modifiée
+            </span>
+          )}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            type="button"
-            className="iad-btn-secondary"
-            onClick={copyText}
-            data-testid="copy-btn"
-          >
-            <Copy size={14} /> {copied ? "Copié" : "Copier"}
-          </button>
-          <button
-            type="button"
-            className="iad-btn-blue"
-            onClick={onRegenerate}
-            disabled={regenerating}
-            data-testid="regenerate-btn"
-          >
-            <RefreshCw size={14} className={regenerating ? "iad-spin" : ""} />{" "}
-            {regenerating ? "..." : "Régénérer"}
-          </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {!isEditing ? (
+            <>
+              <button
+                type="button"
+                className="iad-btn-secondary"
+                onClick={startEdit}
+                data-testid="edit-btn"
+              >
+                <Pencil size={14} /> Modifier
+              </button>
+              <button
+                type="button"
+                className="iad-btn-secondary"
+                onClick={copyText}
+                data-testid="copy-btn"
+              >
+                <Copy size={14} /> {copied ? "Copié" : "Copier"}
+              </button>
+              <button
+                type="button"
+                className="iad-btn-blue"
+                onClick={onRegenerate}
+                disabled={regenerating}
+                data-testid="regenerate-btn"
+              >
+                <RefreshCw size={14} className={regenerating ? "iad-spin" : ""} />{" "}
+                {regenerating ? "..." : "Régénérer"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="iad-btn-secondary"
+                onClick={cancelEdit}
+                data-testid="cancel-edit-btn"
+              >
+                <X size={14} /> Annuler
+              </button>
+              <button
+                type="button"
+                className="iad-btn-blue"
+                onClick={saveEdit}
+                data-testid="save-edit-btn"
+              >
+                <Save size={14} /> Enregistrer
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      <div
-        className="iad-annonce-text"
-        data-testid="annonce-text"
-        style={{
-          background: "#FAFBFC",
-          borderRadius: 10,
-          padding: 18,
-          border: "1px solid #EEF2F7",
-        }}
-      >
-        {result.annonce_text}
-      </div>
+      {isEditing ? (
+        <textarea
+          data-testid="annonce-textarea"
+          value={editedText}
+          onChange={(e) => setEditedText(e.target.value)}
+          className="iad-annonce-text"
+          style={{
+            width: "100%",
+            minHeight: 420,
+            background: "#FAFBFC",
+            borderRadius: 10,
+            padding: 18,
+            border: "1px solid #1B3A6B",
+            resize: "vertical",
+            outline: "none",
+            boxShadow: "0 0 0 3px rgba(27, 58, 107, 0.12)",
+          }}
+          autoFocus
+        />
+      ) : (
+        <div
+          className="iad-annonce-text"
+          data-testid="annonce-text"
+          style={{
+            background: "#FAFBFC",
+            borderRadius: 10,
+            padding: 18,
+            border: "1px solid #EEF2F7",
+          }}
+        >
+          {displayText}
+        </div>
+      )}
 
-      {result.hashtags?.length > 0 && (
+      {result.hashtags?.length > 0 && !isEditing && (
         <div style={{ marginTop: 18 }}>
           <div
             style={{
@@ -139,7 +238,7 @@ export default function ResultCard({ result, onRegenerate, regenerating }) {
         }}
         data-testid="char-count"
       >
-        {result.char_count} caractères
+        {charCount} caractères
       </div>
     </div>
   );
