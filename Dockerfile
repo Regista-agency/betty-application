@@ -4,7 +4,8 @@ WORKDIR /frontend
 
 COPY frontend/package.json ./
 COPY frontend/package-lock.json* ./
-RUN npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps \
+ && npm install --legacy-peer-deps --no-save ajv@^8 ajv-keywords@^5
 
 COPY frontend/ ./
 # Empty REACT_APP_BACKEND_URL -> frontend uses relative /api paths (same origin)
