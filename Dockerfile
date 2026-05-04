@@ -2,13 +2,14 @@
 FROM node:20-alpine AS frontend-build
 WORKDIR /frontend
 
-COPY frontend/package.json frontend/yarn.lock ./
-RUN yarn install --frozen-lockfile
+COPY frontend/package.json ./
+COPY frontend/package-lock.json* ./
+RUN npm install --legacy-peer-deps
 
 COPY frontend/ ./
 # Empty REACT_APP_BACKEND_URL -> frontend uses relative /api paths (same origin)
 ENV REACT_APP_BACKEND_URL=""
-RUN yarn build
+RUN npm run build
 
 
 # ---------- Stage 2: Python backend + static frontend ----------
