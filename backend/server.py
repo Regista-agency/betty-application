@@ -276,6 +276,28 @@ app.add_middleware(
 )
 
 
+# --------- Serve built frontend if present (production docker) ---------
+_FRONTEND_DIR = os.environ.get("FRONTEND_BUILD_DIR", "/app/frontend_build")
+if os.path.isdir(_FRONTEND_DIR):
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    app.mount(
+        "/static",
+        StaticFiles(directory=os.path.join(_FRONTEND_DIR, "static")),
+        name="static",
+    )
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_catch_all(full_path: str):
+        if full_path.startswith("api"):
+            raise HTTPException(status_code=404, detail="Not Found")
+        asset_path = os.path.join(_FRONTEND_DIR, full_path)
+        if full_path and os.path.isfile(asset_path):
+            return FileResponse(asset_path)
+        return FileResponse(os.path.join(_FRONTEND_DIR, "index.html"))
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     mongo_client.close()
