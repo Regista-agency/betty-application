@@ -9,6 +9,11 @@ RUN npm install --legacy-peer-deps
 COPY frontend/ ./
 # Empty REACT_APP_BACKEND_URL -> frontend uses relative /api paths (same origin)
 ENV REACT_APP_BACKEND_URL=""
+# Prevent CRA from treating warnings as errors; allow legacy OpenSSL for webpack4; raise heap
+ENV CI=false \
+    DISABLE_ESLINT_PLUGIN=true \
+    GENERATE_SOURCEMAP=false \
+    NODE_OPTIONS="--openssl-legacy-provider --max-old-space-size=4096"
 RUN npm run build
 
 
