@@ -21,7 +21,8 @@ services:
       - MONGO_URL=mongodb://bettyiad-mongo:27017
       - DB_NAME=bettyiad
       - CORS_ORIGINS=https://bettyiad.regista.com
-      - EMERGENT_LLM_KEY=${EMERGENT_LLM_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
       - GOOGLE_SERVICE_ACCOUNT_PATH=/app/backend/google_service_account.json
       - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
       - GOOGLE_DRIVE_ROOT_FOLDER_ID=${GOOGLE_DRIVE_ROOT_FOLDER_ID}

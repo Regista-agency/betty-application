@@ -1,9 +1,9 @@
-"""LLM service wrapping GPT-5.2 via emergentintegrations."""
+"""LLM service using Google Gemini (gemini-2.5-flash by default)."""
 import os
-import uuid
 import logging
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,16 @@ IMPORTANT : La ligne du numéro de téléphone doit toujours être "📱 07.59.6
 Génère UNIQUEMENT le texte de l'annonce, prêt à copier-coller sur Facebook. Pas d'explication, pas de commentaire, pas de guillemets autour du texte."""
 
 
+_client = None
+
+
+def _get_client() -> genai.Client:
+    global _client
+    if _client is None:
+        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    return _client
+
+
 def build_user_prompt(fields: dict) -> str:
     return (
         f"Type : {fields.get('type_bien', '')} | "
@@ -79,15 +89,20 @@ def build_user_prompt(fields: dict) -> str:
 
 
 async def generate_annonce(fields: dict) -> str:
-    api_key = os.environ["EMERGENT_LLM_KEY"]
-    session_id = f"betty-{uuid.uuid4()}"
-
-    chat = LlmChat(
-        api_key=api_key,
-        session_id=session_id,
-        system_message=SYSTEM_PROMPT,
-    ).with_model("openai", "gpt-5.2")
-
+    client = _get_client()
+    model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
     user_prompt = build_user_prompt(fields)
-    response = await chat.send_message(UserMessage(text=user_prompt))
-    return response.strip() if isinstance(response, str) else str(response).strip()
+
+    response = await client.aio.models.generate_content(
+        model=model,
+        contents=user_prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            temperature=0.9,
+            max_output_tokens=2048,
+        ),
+    )
+    text = (response.text or "").strip()
+    if not text:
+        raise RuntimeError("Gemini n'a retourné aucun texte")
+    return text

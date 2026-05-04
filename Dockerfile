@@ -28,8 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --upgrade pip \
- && pip install --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ \
-      -r /app/backend/requirements.txt
+ && pip install -r /app/backend/requirements.txt
 
 COPY backend/ /app/backend/
 COPY --from=frontend-build /frontend/build/ /app/frontend_build/
