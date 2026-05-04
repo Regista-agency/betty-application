@@ -1,0 +1,64 @@
+{
+  "summary": "Tested Betty Campobasso annonce generator end-to-end. Backend: 5/6 pytest tests pass; photo upload to Google Drive fails with 500 due to service-account storage quota limitation. Frontend: full create-annonce flow and change-statut flow work correctly through public REACT_APP_BACKEND_URL; all data-testid hooks present; LLM-generated text contains expected phone line, price emoji and hashtags; status change correctly produces 'SOUS COMPROMIS' text and updates the Sheet.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/photos/upload",
+        "issue": "Returns 500 'Service Accounts do not have storage quota' when actually uploading file bytes. Folder creation works, but file upload to Drive fails because the root folder (1T5d4wlKdxuIOQS4NACtnre-nanhfmTAJ) is in a personal Drive, not a Shared Drive. Service accounts cannot store files outside Shared Drives. Fix: move the root folder to a Google Shared Drive and re-share with the service account, or use OAuth delegation.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "POST /api/photos/upload",
+        "issue": "When all uploaded files are empty (0 bytes) the route still returns 200 with empty photo_urls (folder is created and orphaned). Consider 400 if no valid files."
+      },
+      {
+        "endpoint": "GET /api/biens",
+        "issue": "Reads the entire sheet (A2:R10000) on every call and reverses in Python; could become slow with many rows. Acceptable for current MVP."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Header",
+        "issues": ["Pink phone number '07 59 61 56 54' on dark blue header has WCAG contrast ratio borderline (~4.0:1). Consider a slightly lighter/whiter pink or bolder weight for AA compliance."]
+      },
+      {
+        "screen": "Console (dev only)",
+        "issues": ["React hydration warning '<span> cannot be a child of <option>' originating from Emergent dev-tools instrumentation injecting span into <option> children — does not appear in production build, no code change needed."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_betty_api.py",
+    "/app/test_reports/pytest/iteration_1.xml"
+  ],
+  "action_items": [
+    "Move GOOGLE_DRIVE_ROOT_FOLDER_ID to a Google Shared Drive (or switch to OAuth delegation) so /api/photos/upload can actually store image bytes — currently returns 500 with 'storageQuotaExceeded'.",
+    "Optional: in /api/photos/upload, return 400 when zero non-empty files are received instead of creating an empty Drive folder.",
+    "Optional: consider polishing pink-on-blue contrast in header phone number."
+  ],
+  "critical_code_review_comments": [
+    "google_services.py: GoogleService is instantiated lazily as a singleton — fine; but credentials are loaded synchronously in the request thread on first call. Consider warming up at startup so /api/health failures surface immediately.",
+    "server.py: list_biens reverses the entire list in memory; OK for MVP but add pagination if rows grow.",
+    "server.py: change-statut overwrites timestamp/statut/annonce_text/hashtags but does not update photo_urls or other fields, which is correct per spec. ID and creation order are preserved.",
+    "llm_service.py: builds a new LlmChat per request with a fresh session_id — good for stateless generation but means no caching; acceptable.",
+    "Frontend: option content includes a span (from dev-tooling), causing React hydration warning. No action required for production."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_betty_api.py",
+    "/app/test_reports/iteration_1.json",
+    "/app/test_reports/pytest/iteration_1.xml"
+  ],
+  "success_rate": {"backend": "83% (5/6, 1 skipped/failed = photo upload due to env)", "frontend": "100% on tested flows"},
+  "test_credentials": "N/A — no auth in this app",
+  "seed_data_creation": "Created test biens in the live Google Sheet with ville='TEST_Raismes' and 'TEST_RaismesUI' (status changed to 'Sous compromis'). Should be cleaned up manually if needed.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest in /app/backend/tests/test_betty_api.py is the regression suite. The photo upload test self-skips on Drive 500. Re-run after the root folder is moved to a Shared Drive. UI flow has been validated end-to-end against the public REACT_APP_BACKEND_URL.",
+  "rca of the issue": "POST /api/photos/upload root cause: googleapiclient call to drive.files.create fails with HTTP 403 storageQuotaExceeded because the parent folder lives in a personal Google Drive. Service accounts have no personal Drive quota and can only store files in a Shared Drive. Reproduction: POST multipart with a real (non-empty) image file to /api/photos/upload — folder is created (folders don't consume quota), but the subsequent files.create call returns 403 which our code wraps into HTTP 500. Mitigation: (a) move the root folder into a Google Shared Drive and re-share with service-account email, OR (b) configure OAuth domain-wide delegation so the service account impersonates a real user. No code change in google_services.py is needed beyond ensuring supportsAllDrives=True (already in place)."
+}
