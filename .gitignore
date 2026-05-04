@@ -78,6 +78,10 @@ agenthub/agents/youtube/db
 
 memory/test_credentials.md
 
+# Google service account (sensitive — never commit)
+backend/google_service_account.json
+google_service_account*.json
+
 # Mobile development
 android-sdk/-e 
 # Environment and credential files
