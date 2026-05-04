@@ -103,6 +103,16 @@ async def upload_photos(
     type_bien: str = Form(...),
     files: List[UploadFile] = File(...),
 ):
+    # Read all files first so we can reject if empty
+    file_payloads = []
+    for f in files:
+        content = await f.read()
+        if content:
+            file_payloads.append((f.filename or "photo.jpg", f.content_type or "image/jpeg", content))
+
+    if not file_payloads:
+        raise HTTPException(status_code=400, detail="Aucun fichier valide reçu")
+
     try:
         gs = get_google_service()
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -110,12 +120,8 @@ async def upload_photos(
         folder = gs.create_folder(folder_name)
 
         photo_urls = []
-        for f in files:
-            content = await f.read()
-            if not content:
-                continue
-            mime = f.content_type or "image/jpeg"
-            uploaded = gs.upload_image(folder["id"], f.filename or "photo.jpg", content, mime)
+        for filename, mime, content in file_payloads:
+            uploaded = gs.upload_image(folder["id"], filename, content, mime)
             photo_urls.append(uploaded["public_url"])
 
         return {
@@ -125,7 +131,18 @@ async def upload_photos(
         }
     except Exception as e:
         logger.exception("Upload photos failed")
-        raise HTTPException(status_code=500, detail=f"Upload échoué: {e}")
+        msg = str(e)
+        if "storageQuotaExceeded" in msg or "do not have storage quota" in msg:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Les Service Accounts Google ne peuvent stocker de fichiers que dans un "
+                    "Shared Drive (Google Workspace). Le dossier Drive actuel est un Drive personnel. "
+                    "Solution: crée un Shared Drive et partage-le avec le service account, puis mets "
+                    "à jour GOOGLE_DRIVE_ROOT_FOLDER_ID. L'annonce peut être générée sans photos."
+                ),
+            )
+        raise HTTPException(status_code=500, detail=f"Upload échoué: {msg}")
 
 
 @api_router.post("/biens/generate", response_model=GenerateResponse)

@@ -76,8 +76,17 @@ export default function CreateAnnonceTab() {
     try {
       let photoData = { folder_id: "", folder_url: "", photo_urls: [] };
       if (!regen && files.length > 0) {
-        toast("Upload des photos sur Google Drive...");
-        photoData = await uploadPhotosIfAny();
+        try {
+          toast("Upload des photos sur Google Drive...");
+          photoData = await uploadPhotosIfAny();
+        } catch (uploadErr) {
+          console.error(uploadErr);
+          const msg =
+            uploadErr?.response?.data?.detail ||
+            "L'upload Drive a échoué — l'annonce est générée sans photos.";
+          toast.warning(msg, { duration: 8000 });
+          photoData = { folder_id: "", folder_url: "", photo_urls: [] };
+        }
       } else if (regen && result) {
         photoData = {
           folder_id: "",
