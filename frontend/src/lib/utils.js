@@ -1,6 +1,5 @@
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge"
-
-export function cn(...inputs) {
-  return twMerge(clsx(inputs));
+export function extractHashtags(text) {
+  const re = /#[\p{L}\p{N}_]+/gu;
+  const matches = text.match(re) || [];
+  return Array.from(new Set(matches));
 }

@@ -1,4 +1,6 @@
-import React, { useRef, useState } from "react";
+"use client";
+
+import { useRef, useState } from "react";
 import { X, ImagePlus } from "lucide-react";
 
 export default function PhotoUpload({ files, setFiles }) {
@@ -58,11 +60,7 @@ export default function PhotoUpload({ files, setFiles }) {
           onChange={(e) => onFilesSelected(e.target.files)}
           data-testid="photo-input"
         />
-        <ImagePlus
-          size={28}
-          color="#1B3A6B"
-          style={{ margin: "0 auto 8px", display: "block" }}
-        />
+        <ImagePlus size={28} color="#1B3A6B" style={{ margin: "0 auto 8px", display: "block" }} />
         <div style={{ color: "#1B3A6B", fontWeight: 600, fontSize: 14 }}>
           Glisse tes photos ici ou clique pour importer
         </div>

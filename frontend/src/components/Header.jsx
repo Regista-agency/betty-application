@@ -1,4 +1,4 @@
-import React from "react";
+"use client";
 
 export default function Header() {
   return (
@@ -43,14 +43,9 @@ export default function Header() {
         </div>
       </div>
 
-      <div
-        data-testid="betty-contact"
-        style={{ textAlign: "right", lineHeight: 1.2 }}
-      >
+      <div data-testid="betty-contact" style={{ textAlign: "right", lineHeight: 1.2 }}>
         <div style={{ fontWeight: 700, fontSize: 15 }}>Betty Campobasso</div>
-        <div style={{ color: "#E91E8C", fontSize: 13, fontWeight: 600 }}>
-          07 59 61 56 54
-        </div>
+        <div style={{ color: "#E91E8C", fontSize: 13, fontWeight: 600 }}>07 59 61 56 54</div>
       </div>
     </header>
   );

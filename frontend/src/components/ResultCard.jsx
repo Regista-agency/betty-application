@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import { Copy, RefreshCw, Check, Sparkles, Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -7,7 +9,6 @@ export default function ResultCard({ result, onRegenerate, regenerating }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState("");
 
-  // Reset edited text whenever a new result arrives (new generation or regeneration)
   useEffect(() => {
     if (result) {
       setEditedText(result.annonce_text);
@@ -33,14 +34,7 @@ export default function ResultCard({ result, onRegenerate, regenerating }) {
         }}
       >
         <Sparkles size={48} color="#1B3A6B" style={{ opacity: 0.5 }} />
-        <div
-          style={{
-            marginTop: 14,
-            fontSize: 18,
-            fontWeight: 600,
-            color: "#475569",
-          }}
-        >
+        <div style={{ marginTop: 14, fontSize: 18, fontWeight: 600, color: "#475569" }}>
           Ton annonce apparaîtra ici
         </div>
         <div style={{ marginTop: 6, fontSize: 14, color: "#94A3B8" }}>
@@ -67,12 +61,10 @@ export default function ResultCard({ result, onRegenerate, regenerating }) {
     setEditedText(displayText);
     setIsEditing(true);
   };
-
   const cancelEdit = () => {
     setEditedText(result.annonce_text);
     setIsEditing(false);
   };
-
   const saveEdit = () => {
     setIsEditing(false);
     toast.success("Modifications enregistrées localement");
@@ -116,20 +108,10 @@ export default function ResultCard({ result, onRegenerate, regenerating }) {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {!isEditing ? (
             <>
-              <button
-                type="button"
-                className="iad-btn-secondary"
-                onClick={startEdit}
-                data-testid="edit-btn"
-              >
+              <button type="button" className="iad-btn-secondary" onClick={startEdit} data-testid="edit-btn">
                 <Pencil size={14} /> Modifier
               </button>
-              <button
-                type="button"
-                className="iad-btn-secondary"
-                onClick={copyText}
-                data-testid="copy-btn"
-              >
+              <button type="button" className="iad-btn-secondary" onClick={copyText} data-testid="copy-btn">
                 <Copy size={14} /> {copied ? "Copié" : "Copier"}
               </button>
               <button
@@ -145,20 +127,10 @@ export default function ResultCard({ result, onRegenerate, regenerating }) {
             </>
           ) : (
             <>
-              <button
-                type="button"
-                className="iad-btn-secondary"
-                onClick={cancelEdit}
-                data-testid="cancel-edit-btn"
-              >
+              <button type="button" className="iad-btn-secondary" onClick={cancelEdit} data-testid="cancel-edit-btn">
                 <X size={14} /> Annuler
               </button>
-              <button
-                type="button"
-                className="iad-btn-blue"
-                onClick={saveEdit}
-                data-testid="save-edit-btn"
-              >
+              <button type="button" className="iad-btn-blue" onClick={saveEdit} data-testid="save-edit-btn">
                 <Save size={14} /> Enregistrer
               </button>
             </>
@@ -202,14 +174,7 @@ export default function ResultCard({ result, onRegenerate, regenerating }) {
 
       {result.hashtags?.length > 0 && !isEditing && (
         <div style={{ marginTop: 18 }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "#1B3A6B",
-              marginBottom: 8,
-            }}
-          >
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#1B3A6B", marginBottom: 8 }}>
             Hashtags suggérés
           </div>
           <div data-testid="hashtags">

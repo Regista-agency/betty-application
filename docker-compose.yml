@@ -1,13 +1,4 @@
 services:
-  bettyiad-mongo:
-    image: mongo:7
-    container_name: bettyiad-mongo
-    restart: always
-    volumes:
-      - bettyiad_mongo_data:/data/db
-    networks:
-      - bettyiad-network
-
   bettyiad:
     build:
       context: .
@@ -15,24 +6,16 @@ services:
       target: production
     container_name: bettyiad-prod
     restart: always
-    depends_on:
-      - bettyiad-mongo
     environment:
-      - MONGO_URL=mongodb://bettyiad-mongo:27017
-      - DB_NAME=bettyiad
-      - CORS_ORIGINS=https://bettyiad.regista.com
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
-      - GOOGLE_SERVICE_ACCOUNT_PATH=/app/backend/google_service_account.json
+      - GOOGLE_SERVICE_ACCOUNT_PATH=/app/google_service_account.json
       - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
-      - GOOGLE_DRIVE_ROOT_FOLDER_ID=${GOOGLE_DRIVE_ROOT_FOLDER_ID}
       - GCS_BUCKET=${GCS_BUCKET}
-      - FRONTEND_BUILD_DIR=/app/frontend_build
     volumes:
-      # Mount service-account JSON as read-only (do not bake into image)
-      - ./backend/google_service_account.json:/app/backend/google_service_account.json:ro
+      # Service account JSON (read-only, never baked into image)
+      - ./google_service_account.json:/app/google_service_account.json:ro
     networks:
-      - bettyiad-network
       - traefik-proxy
     labels:
       - traefik.enable=true
@@ -41,13 +24,9 @@ services:
       - traefik.http.routers.bettyiad.tls=true
       - traefik.http.routers.bettyiad.entrypoints=websecure
       - traefik.http.routers.bettyiad.tls.certresolver=mytlschallenge
-      - traefik.http.services.bettyiad.loadbalancer.server.port=8001
-
-volumes:
-  bettyiad_mongo_data:
+      - traefik.http.services.bettyiad.loadbalancer.server.port=3000
 
 networks:
-  bettyiad-network:
   traefik-proxy:
     external: true
     name: root_traefik-proxy

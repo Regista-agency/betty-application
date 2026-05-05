@@ -182,3 +182,6 @@ credentials.json
 *.pem
 *.key
 .credentials
+frontend/.next/dev/cache/turbopack/8d0f77bf/00000045.sst
+frontend/node_modules/@next/swc-linux-arm64-gnu/next-swc.linux-arm64-gnu.node
+frontend/node_modules/@next/swc-linux-arm64-musl/next-swc.linux-arm64-musl.node

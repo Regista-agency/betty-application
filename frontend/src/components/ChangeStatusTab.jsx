@@ -1,11 +1,9 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+"use client";
+
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
 import ResultCard from "./ResultCard";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
 
 const STATUTS = [
   "À vendre",
@@ -25,7 +23,9 @@ export default function ChangeStatusTab() {
   const fetchBiens = async () => {
     setLoadingList(true);
     try {
-      const { data } = await axios.get(`${API}/biens`);
+      const res = await fetch("/api/biens");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
       setBiens(data);
       if (data.length > 0 && !selectedId) setSelectedId(data[0].id);
     } catch (e) {
@@ -48,19 +48,22 @@ export default function ChangeStatusTab() {
     }
     setLoading(true);
     try {
-      const { data } = await axios.post(
-        `${API}/biens/${selectedId}/change-statut`,
-        { nouveau_statut: nouveauStatut }
-      );
+      const res = await fetch(`/api/biens/${selectedId}/change-statut`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nouveau_statut: nouveauStatut }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
       setResult(data);
       toast.success("Statut mis à jour !");
       fetchBiens();
     } catch (e) {
       console.error(e);
-      toast.error(
-        e?.response?.data?.detail ||
-          "Une erreur est survenue, réessaie dans quelques secondes"
-      );
+      toast.error(e.message || "Une erreur est survenue");
     } finally {
       setLoading(false);
     }
@@ -79,14 +82,7 @@ export default function ChangeStatusTab() {
       }}
     >
       <div className="iad-card" data-testid="change-statut-card">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "start",
-            gap: 12,
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12 }}>
           <div>
             <h2
               style={{
@@ -99,14 +95,7 @@ export default function ChangeStatusTab() {
             >
               Changer un statut
             </h2>
-            <p
-              style={{
-                color: "#6B7280",
-                marginTop: 4,
-                marginBottom: 22,
-                fontSize: 14,
-              }}
-            >
+            <p style={{ color: "#6B7280", marginTop: 4, marginBottom: 22, fontSize: 14 }}>
               Sélectionne un bien existant et mets à jour son statut ✨
             </p>
           </div>
@@ -132,9 +121,7 @@ export default function ChangeStatusTab() {
               disabled={biens.length === 0}
             >
               {biens.length === 0 && (
-                <option value="">
-                  {loadingList ? "Chargement..." : "Aucun bien dans le Sheet"}
-                </option>
+                <option value="">{loadingList ? "Chargement..." : "Aucun bien dans le Sheet"}</option>
               )}
               {biens.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -155,9 +142,7 @@ export default function ChangeStatusTab() {
               onChange={(e) => setNouveauStatut(e.target.value)}
               data-testid="nouveau-statut-select"
             >
-              {STATUTS.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
+              {STATUTS.map((s) => (<option key={s}>{s}</option>))}
             </select>
           </div>
 
@@ -169,23 +154,14 @@ export default function ChangeStatusTab() {
             data-testid="change-statut-btn"
           >
             {loading ? (
-              <>
-                <span className="iad-spinner" />
-                Betty met à jour... ✍️
-              </>
-            ) : (
-              <>✨ Mettre à jour le statut</>
-            )}
+              <><span className="iad-spinner" /> Betty met à jour... ✍️</>
+            ) : (<>✨ Mettre à jour le statut</>)}
           </button>
         </div>
       </div>
 
       <div>
-        <ResultCard
-          result={result}
-          onRegenerate={submit}
-          regenerating={loading}
-        />
+        <ResultCard result={result} onRegenerate={submit} regenerating={loading} />
       </div>
     </div>
   );

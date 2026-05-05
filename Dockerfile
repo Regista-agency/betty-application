@@ -1,49 +1,48 @@
-# ---------- Stage 1: build React frontend ----------
-FROM node:20-alpine AS frontend-build
-WORKDIR /frontend
+# Dockerfile multi-stage Next.js 16 standalone
 
-COPY frontend/package.json ./
-COPY frontend/package-lock.json* ./
-RUN npm install --legacy-peer-deps \
- && npm install --legacy-peer-deps --no-save ajv@^8 ajv-keywords@^5
-
-COPY frontend/ ./
-# Empty REACT_APP_BACKEND_URL -> frontend uses relative /api paths (same origin)
-ENV REACT_APP_BACKEND_URL=""
-# Prevent CRA from treating warnings as errors; allow legacy OpenSSL for webpack4; raise heap
-ENV CI=false \
-    DISABLE_ESLINT_PLUGIN=true \
-    GENERATE_SOURCEMAP=false \
-    NODE_OPTIONS="--openssl-legacy-provider --max-old-space-size=4096"
-RUN npm run build
-
-
-# ---------- Stage 2: Python backend + static frontend ----------
-FROM python:3.11-slim AS production
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    FRONTEND_BUILD_DIR=/app/frontend_build
-
+# Stage 1: Base
+FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl \
-    && rm -rf /var/lib/apt/lists/*
+# Stage 2: Dependencies
+FROM base AS deps
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install --legacy-peer-deps
 
-COPY backend/requirements.txt /app/backend/requirements.txt
-RUN pip install --upgrade pip \
- && pip install -r /app/backend/requirements.txt
+# Stage 3: Builder
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY frontend/ ./
 
-COPY backend/ /app/backend/
-COPY --from=frontend-build /frontend/build/ /app/frontend_build/
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NODE_ENV=production
 
-WORKDIR /app/backend
+RUN npm run build
 
-EXPOSE 8001
+# Stage 4: Production runner
+FROM base AS production
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+
+# Non-root user
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 nextjs
+
+# Standalone build output (Next.js auto-bundles deps)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+USER nextjs
+EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD curl -fsS http://localhost:8001/api/health || exit 1
+  CMD wget -q --spider http://localhost:3000/api/health || exit 1
 
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]
+CMD ["node", "server.js"]
