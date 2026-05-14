@@ -12,19 +12,30 @@ services:
       - GOOGLE_SERVICE_ACCOUNT_PATH=/app/google_service_account.json
       - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
       - GCS_BUCKET=${GCS_BUCKET}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_TRUST_HOST=true
+      - BETTY_EMAIL=${BETTY_EMAIL}
+      - BETTY_PASSWORD=${BETTY_PASSWORD}
     volumes:
-      # Service account JSON (read-only, never baked into image)
       - ./google_service_account.json:/app/google_service_account.json:ro
+    expose:
+      - "3000"
     networks:
       - traefik-proxy
     labels:
       - traefik.enable=true
       - traefik.docker.network=root_traefik-proxy
-      - traefik.http.routers.bettyiad.rule=Host(`bettyiad.regista.com`)
-      - traefik.http.routers.bettyiad.tls=true
+      - traefik.http.routers.bettyiad.rule=Host(`bettyiad.regista-agency.com`)
       - traefik.http.routers.bettyiad.entrypoints=websecure
+      - traefik.http.routers.bettyiad.tls=true
       - traefik.http.routers.bettyiad.tls.certresolver=mytlschallenge
-      - traefik.http.services.bettyiad.loadbalancer.server.port=3000
+      - traefik.http.routers.bettyiad.service=bettyiad-svc
+      - traefik.http.services.bettyiad-svc.loadbalancer.server.port=3000
+      - traefik.http.services.bettyiad-svc.loadbalancer.server.scheme=http
+      - traefik.http.routers.bettyiad-http.rule=Host(`bettyiad.regista-agency.com`)
+      - traefik.http.routers.bettyiad-http.entrypoints=web
+      - traefik.http.routers.bettyiad-http.middlewares=bettyiad-https-redirect
+      - traefik.http.middlewares.bettyiad-https-redirect.redirectscheme.scheme=https
 
 networks:
   traefik-proxy:
