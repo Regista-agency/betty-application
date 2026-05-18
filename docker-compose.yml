@@ -25,14 +25,14 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=root_traefik-proxy
-      - traefik.http.routers.bettyiad.rule=Host(`batty-iad.regista-agency.com`)
+      - traefik.http.routers.bettyiad.rule=Host(`bettyiad.regista-agency.com`)
       - traefik.http.routers.bettyiad.entrypoints=websecure
       - traefik.http.routers.bettyiad.tls=true
       - traefik.http.routers.bettyiad.tls.certresolver=mytlschallenge
       - traefik.http.routers.bettyiad.service=bettyiad-svc
       - traefik.http.services.bettyiad-svc.loadbalancer.server.port=3000
       - traefik.http.services.bettyiad-svc.loadbalancer.server.scheme=http
-      - traefik.http.routers.bettyiad-http.rule=Host(`batty-iad.regista-agency.com`)
+      - traefik.http.routers.bettyiad-http.rule=Host(`bettyiad.regista-agency.com`)
       - traefik.http.routers.bettyiad-http.entrypoints=web
       - traefik.http.routers.bettyiad-http.middlewares=bettyiad-https-redirect
       - traefik.http.middlewares.bettyiad-https-redirect.redirectscheme.scheme=https
